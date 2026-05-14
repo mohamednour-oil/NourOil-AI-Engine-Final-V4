@@ -1,0 +1,41 @@
+export default {
+  async fetch(request, env) {
+    const corsHeaders = {
+      "Access-Control-Allow-Origin": "*", // يسمح بالوصول من أي مكان حتى من جهازك الشخصي
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Access-Control-Max-Age": "86400",
+    };
+
+    // الرد على طلبات الـ OPTIONS (Preflight) بشكل صحيح
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        headers: corsHeaders,
+      });
+    }
+
+    if (request.method === "POST") {
+      try {
+        const body = await request.json();
+        
+        // هنا يتم استدعاء الذكاء الاصطناعي
+        // تأكد أنك أضفت "AI" في الـ Bindings داخل إعدادات الـ Worker
+        const aiResponse = await env.AI.run("@cf/meta/llama-3-8b-instruct", {
+          prompt: body.prompt,
+        });
+
+        return new Response(JSON.stringify({ result: aiResponse.response }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+
+      } catch (err) {
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    return new Response("NourOil API Engine is Running", { headers: corsHeaders });
+  },
+};
