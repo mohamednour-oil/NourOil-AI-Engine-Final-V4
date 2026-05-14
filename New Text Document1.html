@@ -1,41 +1,313 @@
-export default {
-  async fetch(request, env) {
-    const corsHeaders = {
-      "Access-Control-Allow-Origin": "*", // يسمح بالوصول من أي مكان حتى من جهازك الشخصي
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-      "Access-Control-Max-Age": "86400",
-    };
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NourOil AI Engine V4 — Final</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+    <style>
+        :root {
+            --brand-primary: #1D9E75;
+            --brand-secondary: #0F6E56;
+            --bg-dark: #0f1115;
+            --card-dark: #1a1d23;
+            --border-dark: #2d323a;
+            --text-gold: #c5a059;
+            --text-white: #f8f9fa;
+            --text-dim: #9ca3af;
+        }
 
-    // الرد على طلبات الـ OPTIONS (Preflight) بشكل صحيح
-    if (request.method === "OPTIONS") {
-      return new Response(null, {
-        headers: corsHeaders,
-      });
-    }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-    if (request.method === "POST") {
-      try {
-        const body = await request.json();
-        
-        // هنا يتم استدعاء الذكاء الاصطناعي
-        // تأكد أنك أضفت "AI" في الـ Bindings داخل إعدادات الـ Worker
-        const aiResponse = await env.AI.run("@cf/meta/llama-3-8b-instruct", {
-          prompt: body.prompt,
-        });
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-white);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+        }
 
-        return new Response(JSON.stringify({ result: aiResponse.response }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        .app-container {
+            width: 100%;
+            max-width: 600px;
+            margin-top: 20px;
+        }
 
-      } catch (err) {
-        return new Response(JSON.stringify({ error: err.message }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    }
+        .app-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
 
-    return new Response("NourOil API Engine is Running", { headers: corsHeaders });
-  },
-};
+        .app-header h1 {
+            font-size: 24px;
+            margin: 0;
+            background: linear-gradient(90deg, var(--brand-primary), var(--text-gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 700;
+        }
+
+        .app-header p {
+            font-size: 14px;
+            color: var(--text-dim);
+            margin-top: 10px;
+        }
+
+        .input-card {
+            background: var(--card-dark);
+            border: 1px solid var(--border-dark);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+            margin-bottom: 25px;
+        }
+
+        .field-group {
+            margin-bottom: 20px;
+        }
+
+        .field-group label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-gold);
+            margin-bottom: 10px;
+        }
+
+        select {
+            width: 100%;
+            background: var(--bg-dark);
+            border: 2px solid var(--border-dark);
+            color: white;
+            padding: 14px 18px;
+            border-radius: 12px;
+            font-family: 'Cairo';
+            font-size: 15px;
+            appearance: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        select:focus {
+            border-color: var(--brand-primary);
+            box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.2);
+            outline: none;
+        }
+
+        .generate-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--brand-primary), var(--brand-secondary));
+            color: white;
+            border: none;
+            padding: 18px;
+            border-radius: 14px;
+            font-size: 17px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 6px 20px rgba(29, 158, 117, 0.3);
+        }
+
+        .generate-btn:hover {
+            box-shadow: 0 8px 25px rgba(29, 158, 117, 0.4);
+        }
+
+        .generate-btn:active { transform: scale(0.97); }
+        .generate-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+
+        .result-section {
+            display: none;
+            margin-top: 30px;
+            animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .result-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px dashed var(--brand-primary);
+            border-radius: 18px;
+            overflow: hidden;
+        }
+
+        .result-toolbar {
+            padding: 12px 20px;
+            background: rgba(29, 158, 117, 0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-dark);
+        }
+
+        .result-body {
+            padding: 25px;
+            font-size: 16px;
+            line-height: 1.9;
+            color: #e5e7eb;
+            min-height: 120px;
+            white-space: pre-wrap;
+        }
+
+        .copy-btn {
+            background: var(--brand-primary);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .copy-btn:hover { background: var(--brand-secondary); }
+
+        .spinner { animation: rotate 1s linear infinite; }
+        @keyframes rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 480px) {
+            body { padding: 12px; }
+            .app-header h1 { font-size: 22px; }
+            .input-card { padding: 18px; }
+            .generate-btn { padding: 16px; font-size: 16px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header class="app-header">
+            <h1>NourOil AI Engine <span style="font-size: 12px; opacity: 0.6; font-weight: 400;">Final V4</span></h1>
+            <p>أداة محمد نور الذكية لتوليد المحتوى التسويقي المتخصص</p>
+        </header>
+
+        <main class="input-card">
+            <div class="field-group">
+                <label><i class="ti ti-layout-grid"></i> نوع المحتوى</label>
+                <select id="contentType">
+                    <option value="منشور فيسبوك بيعي">منشور فيسبوك (Facebook Post)</option>
+                    <option value="سيناريو فيديو قصير">سيناريو فيديو (Reel/TikTok Script)</option>
+                    <option value="رسالة واتساب احترافية">رسالة واتساب (WhatsApp)</option>
+                    <option value="5 خطافات تسويقية">5 خطافات إعلانية (Hooks)</option>
+                    <option value="منشور دوّار تعليمي">منشور دوّار (Carousel)</option>
+                    <option value="وصف تقني للمنتج">وصف منتج (Product Description)</option>
+                </select>
+            </div>
+
+            <div class="field-group">
+                <label><i class="ti ti-users"></i> الفئة المستهدفة</label>
+                <select id="audience">
+                    <option value="أصحاب الورش ومراكز الخدمة">أصحاب الورش ومراكز الخدمة</option>
+                    <option value="تجار الزيوت والموزعين">تجار الزيوت والموزعين</option>
+                    <option value="أصحاب أساطيل النقل والشركات">أصحاب أساطيل النقل</option>
+                    <option value="سائقي تطبيقات التوصيل (أوبر وكريم)">كباتن أوبر وكريم</option>
+                    <option value="أصحاب السيارات الملاكي">أصحاب السيارات الملاكي</option>
+                    <option value="الفنيين والميكانيكيين">الفنيين والميكانيكيين</option>
+                </select>
+            </div>
+
+            <div class="field-group">
+                <label><i class="ti ti-bulb"></i> المشكلة الحالية بالسوق</label>
+                <select id="problem">
+                    <option value="تذبذب الأسعار اليومي وعدم الاستقرار">تذبذب الأسعار اليومي</option>
+                    <option value="انتشار الزيوت المغشوشة والمقلدة">خطر الزيوت المغشوشة</option>
+                    <option value="تأخير توريد الطلبيات وتعطل العمل">تأخير التوريدات</option>
+                    <option value="صعوبة اختيار اللزوجة المناسبة لكل محرك">ارتباك المواصفات الفنية</option>
+                    <option value="نقص الثقة في جودة الموردين الحاليين">البحث عن مورد موثوق</option>
+                    <option value="ارتفاع تكاليف الصيانة التشغيلية">ارتفاع تكاليف التشغيل</option>
+                </select>
+            </div>
+
+            <button class="generate-btn" id="genBtn" onclick="generateNourContent()">
+                <i class="ti ti-wand"></i>
+                <span id="btnText">توليد المحتوى التسويقي</span>
+            </button>
+        </main>
+
+        <section class="result-section" id="resultSection">
+            <div class="result-card">
+                <div class="result-toolbar">
+                    <span style="font-size: 13px; font-weight: 700; color: var(--brand-primary);"><i class="ti ti-check"></i> المحتوى المولد جاهز</span>
+                    <button class="copy-btn" onclick="copyResult()">
+                        <i class="ti ti-copy"></i> نسخ النص
+                    </button>
+                </div>
+                <div class="result-body" id="resultBody"></div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const SPINNERS = [
+            "أتمتة", "تبسيط", "ارتقاء", "إحداث ثورة", "تحقيق أقصى استفادة",
+            "تسريع", "تعزيز", "توسيع نطاق", "بناء ثقة", "قيادة السوق",
+            "تحسين الأداء", "ضمان الجودة", "حلول جذرية", "توفير التكاليف"
+        ];
+
+        async function generateNourContent() {
+            const btn = document.getElementById('genBtn');
+            const btnText = document.getElementById('btnText');
+            const resultSection = document.getElementById('resultSection');
+            const resultBody = document.getElementById('resultBody');
+
+            const type = document.getElementById('contentType').value;
+            const aud = document.getElementById('audience').value;
+            const prob = document.getElementById('problem').value;
+            const spinner = SPINNERS[Math.floor(Math.random() * SPINNERS.length)];
+
+            const prompt = `أنت AI Marketing Engine لمنصة محمد نور للزيوت. اكتب ${type} يستهدف ${aud}. 
+            المشكلة الرئيسية: ${prob}. يجب دمج كلمة "${spinner}" في النص بشكل احترافي.
+            الأسلوب: Founder-Led Marketing، لهجة مصرية مهنية، واقعي جداً، ويركز على الحلول العملية.`;
+
+            try {
+                btn.disabled = true;
+                btnText.innerText = "جاري التوليد...";
+                btn.querySelector('i').className = "ti ti-loader spinner";
+                
+                const response = await fetch('https://nouroil.nouroil.workers.dev/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: prompt })
+                });
+
+                if (!response.ok) throw new Error('خطأ في الاتصال');
+
+                const data = await response.json();
+                
+                resultSection.style.display = 'block';
+                resultBody.innerText = data.result || "حدث خطأ في استلام البيانات.";
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+
+            } catch (err) {
+                alert("فشل التوليد: تأكد من إعداد Worker بشكل صحيح.");
+            } finally {
+                btn.disabled = false;
+                btnText.innerText = "توليد المحتوى التسويقي";
+                btn.querySelector('i').className = "ti ti-wand";
+            }
+        }
+
+        function copyResult() {
+            const content = document.getElementById('resultBody').innerText;
+            navigator.clipboard.writeText(content).then(() => {
+                const copyBtn = document.querySelector('.copy-btn');
+                copyBtn.innerHTML = '<i class="ti ti-check"></i> تم النسخ';
+                setTimeout(() => {
+                    copyBtn.innerHTML = '<i class="ti ti-copy"></i> نسخ النص';
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>
